@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Annotation, PageMeta, Snapshot, Tool } from '@/types'
 import { uid } from '@/types'
+import { isPremium } from '@/lib/entitlement'
 
 export const BLANK_SRC = '__blank__'
 
@@ -20,6 +21,18 @@ type EditorState = {
   pendingStamp: string | null
   history: Snapshot[]
   future: Snapshot[]
+  upgradeOpen: boolean
+  upgradeReason: string | null
+  premium: boolean
+
+  setUpgradeOpen: (open: boolean, reason?: string) => void
+  setPremiumState: (premium: boolean) => void
+  restoreSession: (s: {
+    docName: string
+    srcDocs: Record<string, ArrayBuffer>
+    pages: PageMeta[]
+    annotations: Record<string, Annotation[]>
+  }) => void
 
   openDoc: (name: string, bytes: ArrayBuffer) => void
   mergeDoc: (bytes: ArrayBuffer, pageCount: number) => void
@@ -66,6 +79,25 @@ export const useEditor = create<EditorState>((set) => ({
   pendingStamp: null,
   history: [],
   future: [],
+  upgradeOpen: false,
+  upgradeReason: null,
+  premium: isPremium(),
+
+  setUpgradeOpen: (upgradeOpen, reason) =>
+    set({ upgradeOpen, upgradeReason: reason ?? null }),
+  setPremiumState: (premium) => set({ premium }),
+
+  restoreSession: (s) =>
+    set({
+      docName: s.docName,
+      srcDocs: s.srcDocs,
+      pages: s.pages,
+      annotations: s.annotations,
+      history: [],
+      future: [],
+      currentPage: 0,
+      selectedId: null,
+    }),
 
   openDoc: (name, bytes) => {
     set({

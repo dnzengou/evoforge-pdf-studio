@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react'
 import { exportPdf } from '@/lib/exportPdf'
 import { loadDoc, pageText } from '@/lib/pdfEngine'
+import { BUY_ME_A_COFFEE, FREE_LIMITS } from '@/config/monetization'
+import { canExport, recordExport } from '@/lib/entitlement'
 import { useEditor } from '@/store'
 import type { Tool } from '@/types'
 import { gotoPage } from './EditorArea'
@@ -25,6 +27,8 @@ import {
   Highlighter,
   Image as ImageIcon,
   Minus,
+  Coffee,
+  Crown,
   MousePointer2,
   PenLine,
   PenTool,
@@ -56,7 +60,8 @@ const TOOLS: { id: Tool; label: string; icon: React.ReactNode }[] = [
 const COLORS = ['#e11d48', '#f97316', '#facc15', '#16a34a', '#2563eb', '#7c3aed', '#000000', '#ffffff']
 
 export function TopBar({ onOpen }: { onOpen: (f: File, merge: boolean) => void }) {
-  const { tool, color, width, zoom, pages, currentPage, history, future, docName } = useEditor()
+  const { tool, color, width, zoom, pages, currentPage, history, future, docName, premium } =
+    useEditor()
   const store = useEditor.getState
   const fileRef = useRef<HTMLInputElement>(null)
   const mergeRef = useRef<HTMLInputElement>(null)
@@ -68,9 +73,18 @@ export function TopBar({ onOpen }: { onOpen: (f: File, merge: boolean) => void }
 
   const save = async () => {
     const s = store()
+    if (!canExport()) {
+      s.setUpgradeOpen(
+        true,
+        `Free plan: ${FREE_LIMITS.exportsPerDay} exports/day reached. Premium removes the cap and the watermark.`,
+      )
+      return
+    }
     setSaving(true)
     try {
-      const bytes = await exportPdf(s.srcDocs, s.pages, s.annotations)
+      const watermark = s.premium ? undefined : FREE_LIMITS.watermark
+      const bytes = await exportPdf(s.srcDocs, s.pages, s.annotations, { watermark })
+      recordExport()
       const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -205,7 +219,35 @@ export function TopBar({ onOpen }: { onOpen: (f: File, merge: boolean) => void }
           <BarBtn label="Next page" onClick={() => gotoPage(Math.min(pages.length - 1, currentPage + 1))} icon={<ChevronRight size={14} />} />
         </div>
 
-        <div className="relative ml-auto flex items-center">
+        <div className="ml-auto flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <a
+                href={BUY_ME_A_COFFEE}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded p-1.5 text-yellow-400/80 hover:bg-zinc-800 hover:text-yellow-300"
+              >
+                <Coffee size={16} />
+              </a>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Buy me a coffee</TooltipContent>
+          </Tooltip>
+          {premium ? (
+            <span className="flex items-center gap-1 rounded bg-amber-500/15 px-2 py-1 text-[11px] font-semibold text-amber-300">
+              <Crown size={12} /> PRO
+            </span>
+          ) : (
+            <Button
+              size="sm"
+              className="h-8 gap-1 bg-amber-500 text-xs font-semibold text-zinc-950 hover:bg-amber-400"
+              onClick={() => store().setUpgradeOpen(true)}
+            >
+              <Crown size={13} /> Upgrade
+            </Button>
+          )}
+        </div>
+        <div className="relative ml-2 flex items-center">
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}

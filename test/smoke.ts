@@ -58,6 +58,13 @@ for (const rot of [0, 90, 180, 270]) {
   assert(angle === rot, `export rot=${rot}: rotation applied (${angle})`)
 }
 
+// Free-plan watermark burns into output; premium omits it.
+const wm = await exportPdf({ main: srcBytes }, [pages[0]], {}, { watermark: 'Made with Evoforge PDF — free plan' })
+const wmDoc = await PDFDocument.load(wm)
+assert(wmDoc.getPageCount() === 1, 'watermarked export loads')
+const clean = await exportPdf({ main: srcBytes }, [pages[0]], {})
+assert(clean.byteLength !== wm.byteLength, 'premium export differs from watermarked export')
+
 // Unicode must not crash export — falls back to '?'.
 const uniOut = await exportPdf({ main: srcBytes }, [pages[0]], {
   p1: [{ ...anns[2], id: 'u1', text: '中文注释 café ✓' }],

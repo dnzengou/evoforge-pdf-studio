@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { formFields, matchRects, pageText } from '@/lib/pdfEngine'
 import { countWords, keywords, PII_PATTERNS, summarize } from '@/lib/aiTools'
+import { FREE_LIMITS } from '@/config/monetization'
+import { canRunAi, recordAiRun } from '@/lib/entitlement'
+import { FooterSig } from './FooterSig'
 import { BLANK_SRC, useEditor } from '@/store'
 import type { FormField, PiiHit } from '@/types'
 import { uid } from '@/types'
@@ -34,7 +37,15 @@ export function SidePanel() {
   }
 
   const runSummary = async () => {
+    if (!canRunAi()) {
+      store().setUpgradeOpen(
+        true,
+        `Free plan: ${FREE_LIMITS.aiRunsPerDay} AI summaries/day used. Premium removes the cap.`,
+      )
+      return
+    }
     setBusy('summary')
+    recordAiRun()
     try {
       const parts = await allText()
       const full = parts.map((p) => p.text).join(' ')
@@ -264,6 +275,7 @@ export function SidePanel() {
           )}
         </TabsContent>
       </Tabs>
+      <FooterSig className="border-t border-zinc-800 px-3 py-2" />
     </div>
   )
 }

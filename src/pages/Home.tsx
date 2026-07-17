@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { loadDoc } from '@/lib/pdfEngine'
+import { consumeUpgradeParam, setPremium } from '@/lib/entitlement'
+import { loadSession, saveSessionDebounced, type SavedSession } from '@/lib/persistence'
 import { useEditor } from '@/store'
 import type { PageMeta } from '@/types'
 import { uid } from '@/types'
@@ -7,13 +9,59 @@ import { TopBar } from '@/components/TopBar'
 import { ThumbRail } from '@/components/ThumbRail'
 import { EditorArea } from '@/components/EditorArea'
 import { SidePanel } from '@/components/SidePanel'
-import { FileUp, ShieldCheck, Sparkles, Zap } from 'lucide-react'
+import { UpgradeDialog } from '@/components/UpgradeDialog'
+import { FooterSig } from '@/components/FooterSig'
+import { BUY_ME_A_COFFEE } from '@/config/monetization'
+import { Coffee, FileUp, History, ShieldCheck, Sparkles, Zap } from 'lucide-react'
 
 export default function Home() {
   const hasDoc = useEditor((s) => s.pages.length > 0)
   const store = useEditor.getState
   const [error, setError] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState(false)
+  const [saved, setSaved] = useState<SavedSession | null>(null)
+  const [justUpgraded, setJustUpgraded] = useState(false)
+
+  // Stripe success URL lands here — unlock premium.
+  useEffect(() => {
+    if (consumeUpgradeParam()) {
+      setPremium(true)
+      store().setPremiumState(true)
+      setJustUpgraded(true)
+    }
+  }, [store])
+
+  // Look for a previous session to offer one-click resume (retention hook).
+  useEffect(() => {
+    loadSession().then((s) => s?.pages.length && setSaved(s))
+  }, [])
+
+  // Autosave the working session (debounced) whenever state changes.
+  useEffect(() => {
+    const unsub = useEditor.subscribe((s) => {
+      if (!s.pages.length) return
+      saveSessionDebounced({
+        docName: s.docName,
+        srcDocs: s.srcDocs,
+        pages: s.pages,
+        annotations: s.annotations,
+        savedAt: Date.now(),
+      })
+    })
+    return unsub
+  }, [])
+
+  const resume = useCallback(async (s: SavedSession) => {
+    setError(null)
+    try {
+      for (const [srcId, bytes] of Object.entries(s.srcDocs)) {
+        if (srcId !== '__blank__') await loadDoc(srcId, bytes)
+      }
+      store().restoreSession(s)
+    } catch {
+      setError('Could not restore the previous session.')
+    }
+  }, [store])
 
   const openFile = useCallback(
     async (file: File, merge: boolean) => {
@@ -103,7 +151,21 @@ export default function Home() {
     }
   }, [openFile, hasDoc])
 
-  if (!hasDoc) return <Landing onOpen={openFile} error={error} dragOver={dragOver} />
+  if (!hasDoc) {
+    return (
+      <>
+        <Landing
+          onOpen={openFile}
+          error={error}
+          dragOver={dragOver}
+          saved={saved}
+          onResume={() => saved && resume(saved)}
+          justUpgraded={justUpgraded}
+        />
+        <UpgradeDialog />
+      </>
+    )
+  }
 
   return (
     <div className="flex h-screen flex-col bg-zinc-900 text-zinc-100">
@@ -113,6 +175,7 @@ export default function Home() {
         <EditorArea />
         <SidePanel />
       </div>
+      <UpgradeDialog />
       {dragOver && (
         <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-sky-500/20 backdrop-blur-sm">
           <div className="rounded-xl border-2 border-dashed border-sky-300 bg-zinc-950/90 px-10 py-8 text-lg font-semibold text-sky-200">
@@ -128,13 +191,24 @@ function Landing({
   onOpen,
   error,
   dragOver,
+  saved,
+  onResume,
+  justUpgraded,
 }: {
   onOpen: (f: File, merge: boolean) => void
   error: string | null
   dragOver: boolean
+  saved: SavedSession | null
+  onResume: () => void
+  justUpgraded: boolean
 }) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 px-6 text-zinc-100">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 px-6 py-10 text-zinc-100">
+      {justUpgraded && (
+        <div className="mb-4 rounded-lg border border-emerald-700 bg-emerald-950/60 px-4 py-2 text-sm text-emerald-300">
+          Premium activated — thank you 💚
+        </div>
+      )}
       <div className="mb-2 flex items-center gap-2">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400 to-violet-500 text-lg font-bold">
           E
@@ -144,6 +218,23 @@ function Landing({
       <p className="mb-8 text-sm text-zinc-400">
         Annotate · Sign · Reorder · Merge · Redact · Summarize — 100% in-browser, nothing uploaded.
       </p>
+      {saved && (
+        <button
+          onClick={onResume}
+          className="mb-4 flex w-full max-w-xl items-center gap-3 rounded-xl border border-sky-800 bg-sky-950/40 px-5 py-3 text-left hover:bg-sky-950/70"
+        >
+          <History size={18} className="shrink-0 text-sky-400" />
+          <span>
+            <span className="block text-sm font-medium text-sky-200">
+              Continue where you left off
+            </span>
+            <span className="block text-xs text-zinc-400">
+              {saved.docName} · {saved.pages.length} pages ·{' '}
+              {new Date(saved.savedAt).toLocaleString()}
+            </span>
+          </span>
+        </button>
+      )}
       <label
         className={`flex w-full max-w-xl cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-8 py-16 transition ${
           dragOver ? 'border-sky-400 bg-sky-400/10' : 'border-zinc-700 bg-zinc-900 hover:border-zinc-500'
@@ -173,6 +264,18 @@ function Landing({
           <ShieldCheck size={16} className="mx-auto mb-2 text-emerald-400" />
           Private by design — zero servers, zero uploads, zero tracking.
         </div>
+      </div>
+      <div className="mt-10 flex items-center gap-4">
+        <FooterSig />
+        <span className="text-zinc-700">·</span>
+        <a
+          href={BUY_ME_A_COFFEE}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-1 text-[11px] text-yellow-400/80 hover:text-yellow-300"
+        >
+          <Coffee size={11} /> Buy me a coffee
+        </a>
       </div>
     </div>
   )

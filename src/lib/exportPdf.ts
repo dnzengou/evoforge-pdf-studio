@@ -43,12 +43,19 @@ function toRawRect(
   }
 }
 
-// Helvetica is WinAnsi-only; replace chars it cannot encode instead of throwing.
+// Helvetica is WinAnsi-only. pdf-lib encodes common typography itself when it
+// receives the real Unicode chars — pass those through, replace the rest.
+const WINANSI_OK = new Set([
+  0x2013, 0x2014, 0x2018, 0x2019, 0x201c, 0x201d, 0x2026, 0x2022, 0x20ac,
+  0x2020, 0x2021, 0x2030, 0x2039, 0x203a, 0x0152, 0x0153, 0x0160, 0x0161,
+  0x0178, 0x017d, 0x017e, 0x2122, 0x02c6, 0x02dc,
+])
+
 function winAnsiSafe(text: string): string {
   let out = ''
   for (const ch of text) {
     const code = ch.codePointAt(0) ?? 63
-    out += code <= 255 ? ch : '?'
+    out += code <= 255 || WINANSI_OK.has(code) ? ch : '?'
   }
   return out
 }
@@ -195,6 +202,7 @@ export async function exportPdf(
   srcDocs: Record<string, ArrayBuffer>,
   pages: PageMeta[],
   annotations: Record<string, Annotation[]>,
+  opts: { watermark?: string } = {},
 ): Promise<Uint8Array> {
   const out = await PDFDocument.create()
   const font = await out.embedFont(StandardFonts.Helvetica)
@@ -215,6 +223,21 @@ export async function exportPdf(
     copied.setRotation(degrees(0))
     for (const ann of annotations[meta.id] ?? []) {
       await drawOne(copied, ann, rot, rawW, rawH, font, embedded, out)
+    }
+    if (opts.watermark) {
+      // Bottom-right of the displayed page, counter-rotated like annotations.
+      const size = 8
+      const textW = font.widthOfTextAtSize(opts.watermark, size)
+      const dispW = rot % 180 === 0 ? rawW : rawH
+      const p = toRaw({ x: dispW - textW - 24, y: 14 }, rot, rawW, rawH)
+      copied.drawText(winAnsiSafe(opts.watermark), {
+        x: p.x,
+        y: p.y,
+        size,
+        font,
+        rotate: degrees(rot),
+        color: rgb(0.6, 0.6, 0.6),
+      })
     }
     copied.setRotation(degrees(rot))
     if (src) out.addPage(copied)
