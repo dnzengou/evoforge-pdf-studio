@@ -1,73 +1,51 @@
-# React + TypeScript + Vite
+# Evoforge PDF Studio
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Annotate · Sign · Reorder · Merge · Redact · Summarize — 100% in-browser, nothing uploaded.
 
-Currently, two official plugins are available:
+A best-in-class, AI-powered PDF editor that runs entirely client-side. No servers, no uploads, no tracking.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Features
 
-## React Compiler
+- **Full editor** — pen, highlight, text, rectangle, ellipse, line, arrow, redaction boxes, eraser; select / move / resize; 50-step undo-redo; keyboard shortcuts
+- **Signatures & stamps** — draw a signature, click to place; image stamps
+- **Page surgery** — drag-reorder thumbnails, rotate, delete, insert blank pages, merge multiple PDFs (drop a second file in)
+- **Flattened export** — vector annotations via pdf-lib, rotation-corrected geometry, WinAnsi-safe text
+- **Full-text search** — across all pages, jump to hit
+- **EvometaClaw local AI** — extractive summaries, keywords, PII scan (email / SSN / phone / card / IBAN / IP) with one-click redaction, AcroForm field detection. No API keys, no network
+- **Session restore** — autosaves to IndexedDB; pick up where you left off
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Freemium model
 
-## Expanding the ESLint configuration
+| | Free | Premium ($9 one-time) |
+|---|---|---|
+| Full editor, signatures, page ops | ✅ | ✅ |
+| Exports | 3/day, watermarked | Unlimited, clean |
+| Local AI summaries | 3/day | Unlimited |
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Premium unlocks via a Stripe Payment Link whose success URL is `/?upgraded=1`.
+Configure in `src/config/monetization.ts` (Stripe link, BuyMeACoffee, affiliate links, plan limits).
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Stack
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+React 19 · TypeScript · Vite · Tailwind · shadcn/ui · pdfjs-dist (render) · pdf-lib (export) · zustand
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Develop
+
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Test
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npx tsx test/smoke.ts   # export pipeline, rotation geometry, AI tools
 ```
+
+## Build
+
+```bash
+npm run build           # outputs dist/
+```
+
+Made by [desiredsolutions.me](https://desiredsolutions.me) with 💚 & ☕️ — [Buy me a coffee](https://buymeacoffee.com/yavro)
