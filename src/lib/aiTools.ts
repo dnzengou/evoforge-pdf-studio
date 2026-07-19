@@ -58,13 +58,24 @@ export function keywords(text: string, count = 12): string[] {
     .map(([w]) => w)
 }
 
+// Credit card: require a known brand prefix (Visa / MC / Discover / Amex) with
+// canonical grouping so 16-digit invoice numbers and ISBNs don't false-positive.
+// IP: validate each octet 0-255 so version strings like "5.6.205" don't match.
 export const PII_PATTERNS: { kind: string; pattern: RegExp }[] = [
   { kind: 'Email', pattern: /[\w.+-]+@[\w-]+\.[\w.]+/g },
   { kind: 'Phone', pattern: /(?:\+1[\s.-]?)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}\b/g },
   { kind: 'SSN', pattern: /\b\d{3}-\d{2}-\d{4}\b/g },
-  { kind: 'Credit card', pattern: /\b(?:\d[ -]*?){13,16}\b/g },
+  {
+    kind: 'Credit card',
+    pattern:
+      /\b(?:4\d{3}|5[1-5]\d{2}|6011|65\d{2})[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b|\b3[47]\d{2}[\s-]?\d{6}[\s-]?\d{5}\b/g,
+  },
   { kind: 'IBAN', pattern: /\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b/g },
-  { kind: 'IP address', pattern: /\b(?:\d{1,3}\.){3}\d{1,3}\b/g },
+  {
+    kind: 'IP address',
+    pattern:
+      /\b(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}\b/g,
+  },
 ]
 
 export function countWords(text: string): number {

@@ -1,5 +1,10 @@
 # Evoforge PDF Studio
 
+[![CI](https://github.com/dnzengou/evoforge-pdf-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/dnzengou/evoforge-pdf-studio/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/dnzengou/evoforge-pdf-studio/actions/workflows/codeql.yml/badge.svg)](https://github.com/dnzengou/evoforge-pdf-studio/actions/workflows/codeql.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![100%25 client-side](https://img.shields.io/badge/100%25-client--side-emerald)](.github/SECURITY.md)
+
 Annotate · Sign · Reorder · Merge · Redact · Summarize — 100% in-browser, nothing uploaded.
 
 A best-in-class, AI-powered PDF editor that runs entirely client-side. No servers, no uploads, no tracking.
@@ -25,6 +30,14 @@ A best-in-class, AI-powered PDF editor that runs entirely client-side. No server
 Premium unlocks via a Stripe Payment Link whose success URL is `/?upgraded=1`.
 Configure in `src/config/monetization.ts` (Stripe link, BuyMeACoffee, affiliate links, plan limits).
 
+## Threat model
+
+Your PDF never leaves the tab. See [SECURITY.md](.github/SECURITY.md) for the full posture:
+- No backend, no upload endpoint, no telemetry.
+- Session state persists to the browser's IndexedDB only.
+- The AI layer is pure functions over extracted text — no API keys, no network calls.
+- The deployed origin ships a strict CSP (no `unsafe-eval`, `object-src 'none'`, `frame-ancestors 'none'`).
+
 ## Stack
 
 React 19 · TypeScript · Vite · Tailwind · shadcn/ui · pdfjs-dist (render) · pdf-lib (export) · zustand
@@ -47,5 +60,9 @@ npx tsx test/smoke.ts   # export pipeline, rotation geometry, AI tools
 ```bash
 npm run build           # outputs dist/
 ```
+
+## Deploy
+
+Netlify config (`netlify.toml`) ships strict security headers (CSP · HSTS · Permissions-Policy · X-Frame-Options · X-Content-Type-Options · Referrer-Policy · COOP · CORP) and a SPA fallback. Point Netlify at the repo and it will pick up the config.
 
 Made by [desiredsolutions.me](https://desiredsolutions.me) with 💚 & ☕️ — [Buy me a coffee](https://buymeacoffee.com/yavro)

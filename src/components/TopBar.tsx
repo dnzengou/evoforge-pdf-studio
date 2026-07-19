@@ -5,6 +5,7 @@ import { BUY_ME_A_COFFEE, FREE_LIMITS } from '@/config/monetization'
 import { canExport, recordExport } from '@/lib/entitlement'
 import { useEditor } from '@/store'
 import type { Tool } from '@/types'
+import { uid } from '@/types'
 import { gotoPage } from './EditorArea'
 import { SignaturePad } from './SignaturePad'
 import { Button } from '@/components/ui/button'
@@ -91,7 +92,9 @@ export function TopBar({ onOpen }: { onOpen: (f: File, merge: boolean) => void }
       a.href = url
       a.download = (docName || 'document').replace(/\.pdf$/i, '') + '-edited.pdf'
       a.click()
-      URL.revokeObjectURL(url)
+      // Defer revoke: Chrome sometimes cancels an in-flight download if the URL
+      // is revoked in the same tick as the click.
+      setTimeout(() => URL.revokeObjectURL(url), 30_000)
     } finally {
       setSaving(false)
     }
@@ -143,9 +146,10 @@ export function TopBar({ onOpen }: { onOpen: (f: File, merge: boolean) => void }
             const f = e.target.files?.[0]
             if (!f) return
             const bytes = await f.arrayBuffer()
-            const { numPages } = await loadDoc('probe', bytes)
+            const srcId = uid()
+            const { numPages } = await loadDoc(srcId, bytes)
             store().commit()
-            store().mergeDoc(bytes, numPages)
+            store().mergeDoc(srcId, bytes, numPages)
             e.target.value = ''
           }} />
         <input ref={imgRef} type="file" accept="image/*" className="hidden"

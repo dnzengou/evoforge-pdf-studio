@@ -37,7 +37,9 @@ export function PageView({ meta, index, scale, editingText, setEditingText }: Pr
   const wrapRef = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
   const dragRef = useRef<Drag | null>(null)
-  const [, force] = useState(0)
+  // Mirror shape-mode drag into state so render can show the live preview
+  // without reading refs during render (React 19 correctness rule).
+  const [shapePreview, setShapePreview] = useState<{ start: Point; cur: Point } | null>(null)
 
   const anns = annotations[meta.id] ?? []
 
@@ -146,6 +148,7 @@ export function PageView({ meta, index, scale, editingText, setEditingText }: Pr
       case 'redact': {
         store().commit()
         dragRef.current = { mode: 'shape', start: p, cur: p }
+        setShapePreview({ start: p, cur: p })
         break
       }
       case 'text': {
@@ -203,7 +206,7 @@ export function PageView({ meta, index, scale, editingText, setEditingText }: Pr
       store().updateAnnotation(meta.id, drag.ann)
     } else if (drag.mode === 'shape') {
       drag.cur = p
-      force((n) => n + 1)
+      setShapePreview({ start: drag.start, cur: p })
     } else if (drag.mode === 'move') {
       const dx = p.x - drag.last.x
       const dy = p.y - drag.last.y
@@ -233,6 +236,7 @@ export function PageView({ meta, index, scale, editingText, setEditingText }: Pr
     const drag = dragRef.current
     if (!drag || !size) return
     dragRef.current = null
+    setShapePreview(null)
     if (drag.mode === 'shape') {
       const r = normRect(drag.start, drag.cur)
       if (r.w < 3 && r.h < 3 && tool !== 'line' && tool !== 'arrow') return
@@ -254,8 +258,7 @@ export function PageView({ meta, index, scale, editingText, setEditingText }: Pr
   }
 
   const fl = (y: number) => size.h - y
-  const preview =
-    dragRef.current?.mode === 'shape' ? normRect(dragRef.current.start, dragRef.current.cur) : null
+  const preview = shapePreview ? normRect(shapePreview.start, shapePreview.cur) : null
 
   return (
     <div
@@ -299,12 +302,12 @@ export function PageView({ meta, index, scale, editingText, setEditingText }: Pr
             strokeWidth={tool === 'redact' ? 0 : width}
           />
         )}
-        {preview == null && dragRef.current?.mode === 'shape' && (tool === 'line' || tool === 'arrow') && (
+        {shapePreview && (tool === 'line' || tool === 'arrow') && (
           <line
-            x1={dragRef.current.start.x}
-            y1={fl(dragRef.current.start.y)}
-            x2={dragRef.current.cur.x}
-            y2={fl(dragRef.current.cur.y)}
+            x1={shapePreview.start.x}
+            y1={fl(shapePreview.start.y)}
+            x2={shapePreview.cur.x}
+            y2={fl(shapePreview.cur.y)}
             stroke={color}
             strokeWidth={width}
             strokeDasharray="4 3"

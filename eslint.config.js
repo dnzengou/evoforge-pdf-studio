@@ -19,5 +19,15 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // Demoted to warn: shadcn primitives universally mix constant/type
+      // exports with component exports; refactoring is out of scope for
+      // security-defaults ship. Tracked for v0.3.0.
+      'react-refresh/only-export-components': 'warn',
+      // Demoted to warn: the flagged patterns (URL-param consumption on
+      // mount, matchMedia listener setup) are legitimate useEffect uses.
+      // Case-by-case refactor deferred to v0.3.0.
+      'react-hooks/set-state-in-effect': 'warn',
+    },
   },
 ])

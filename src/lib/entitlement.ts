@@ -14,7 +14,11 @@ export function isPremium(): boolean {
 
 export function setPremium(value: boolean): void {
   try {
-    value ? localStorage.setItem(PREMIUM_KEY, '1') : localStorage.removeItem(PREMIUM_KEY)
+    if (value) {
+      localStorage.setItem(PREMIUM_KEY, '1')
+    } else {
+      localStorage.removeItem(PREMIUM_KEY)
+    }
   } catch {
     // private mode — premium just won't persist
   }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { loadDoc } from '@/lib/pdfEngine'
-import { consumeUpgradeParam, setPremium } from '@/lib/entitlement'
+import { consumeUpgradeParam } from '@/lib/entitlement'
 import { loadSession, saveSessionDebounced, type SavedSession } from '@/lib/persistence'
 import { useEditor } from '@/store'
 import type { PageMeta } from '@/types'
@@ -22,10 +22,10 @@ export default function Home() {
   const [saved, setSaved] = useState<SavedSession | null>(null)
   const [justUpgraded, setJustUpgraded] = useState(false)
 
-  // Stripe success URL lands here — unlock premium.
+  // Stripe success URL lands here — unlock premium. consumeUpgradeParam
+  // already calls setPremium; no need to double-write.
   useEffect(() => {
     if (consumeUpgradeParam()) {
-      setPremium(true)
       store().setPremiumState(true)
       setJustUpgraded(true)
     }
@@ -72,7 +72,7 @@ export default function Home() {
         const { numPages } = await loadDoc(srcId, bytes)
         if (merge) {
           store().commit()
-          store().mergeDoc(bytes, numPages)
+          store().mergeDoc(srcId, bytes, numPages)
           return
         }
         store().openDoc(file.name, bytes)
@@ -98,7 +98,11 @@ export default function Home() {
       const s = useEditor.getState()
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
         e.preventDefault()
-        e.shiftKey ? s.redo() : s.undo()
+        if (e.shiftKey) {
+          s.redo()
+        } else {
+          s.undo()
+        }
         return
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
@@ -132,7 +136,7 @@ export default function Home() {
       e.preventDefault()
       setDragOver(false)
       const f = e.dataTransfer?.files?.[0]
-      if (f?.type === 'application/pdf' || f?.name.endsWith('.pdf')) openFile(f, hasDoc)
+      if (f?.type === 'application/pdf' || f?.name.toLowerCase().endsWith('.pdf')) openFile(f, hasDoc)
     }
     const onDrag = (e: DragEvent) => {
       e.preventDefault()

@@ -35,7 +35,7 @@ type EditorState = {
   }) => void
 
   openDoc: (name: string, bytes: ArrayBuffer) => void
-  mergeDoc: (bytes: ArrayBuffer, pageCount: number) => void
+  mergeDoc: (srcId: string, bytes: ArrayBuffer, pageCount: number) => void
   closeDoc: () => void
   setTool: (tool: Tool) => void
   setColor: (color: string) => void
@@ -112,8 +112,7 @@ export const useEditor = create<EditorState>((set) => ({
     })
   },
 
-  mergeDoc: (bytes, pageCount) => {
-    const srcId = uid()
+  mergeDoc: (srcId, bytes, pageCount) => {
     set((s) => ({
       srcDocs: { ...s.srcDocs, [srcId]: bytes },
       pages: [
