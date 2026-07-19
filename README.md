@@ -26,6 +26,10 @@ A best-in-class, AI-powered PDF editor that runs entirely client-side. No server
 | Full editor, signatures, page ops | ✅ | ✅ |
 | Exports | 3/day, watermarked | Unlimited, clean |
 | Local AI summaries | 3/day | Unlimited |
+| PII scan & one-click redaction | ✅ always free | ✅ |
+| Form-field detection | ✅ always free | ✅ |
+
+Only the summary generator counts against the daily AI cap. Scanning your own PDF for PII or detecting form fields is unlimited on both plans — privacy tooling shouldn't sit behind a paywall.
 
 Premium unlocks via a Stripe Payment Link whose success URL is `/?upgraded=1`.
 Configure in `src/config/monetization.ts` (Stripe link, BuyMeACoffee, affiliate links, plan limits).

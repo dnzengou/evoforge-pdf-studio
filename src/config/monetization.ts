@@ -37,13 +37,17 @@ export const FREE_LIMITS = {
   watermark: 'Made with Evoforge PDF — free plan',
 }
 
+// Only "Local AI summaries" count against FREE_LIMITS.aiRunsPerDay. PII scan and
+// form-field detection are intentionally always free on both plans — scanning your
+// own PDF for personal data shouldn't require a paid plan.
 export const PLAN_FEATURES: { label: string; free: string | boolean; premium: string | boolean }[] = [
   { label: 'Full editor (draw, highlight, text, shapes)', free: true, premium: true },
   { label: 'Signatures & image stamps', free: true, premium: true },
   { label: 'Page reorder, rotate, delete, merge', free: true, premium: true },
   { label: 'Exports per day', free: `${FREE_LIMITS.exportsPerDay} (watermarked)`, premium: 'Unlimited, clean' },
   { label: 'Local AI summaries per day', free: `${FREE_LIMITS.aiRunsPerDay}`, premium: 'Unlimited' },
-  { label: 'PII scan & one-click redaction', free: true, premium: true },
+  { label: 'PII scan & one-click redaction — always free', free: true, premium: true },
+  { label: 'Form-field detection — always free', free: true, premium: true },
   { label: 'Session restore (pick up where you left off)', free: true, premium: true },
   { label: 'Support the maker badge', free: false, premium: true },
 ]
