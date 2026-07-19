@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { shallow } from 'zustand/shallow'
 import { loadDoc } from '@/lib/pdfEngine'
 import { consumeUpgradeParam } from '@/lib/entitlement'
 import { loadSession, saveSessionDebounced, type SavedSession } from '@/lib/persistence'
@@ -36,18 +37,20 @@ export default function Home() {
     loadSession().then((s) => s?.pages.length && setSaved(s))
   }, [])
 
-  // Autosave the working session (debounced) whenever state changes.
+  // Autosave only when persisted slices change — not on tool/zoom/selection churn.
   useEffect(() => {
-    const unsub = useEditor.subscribe((s) => {
-      if (!s.pages.length) return
-      saveSessionDebounced({
-        docName: s.docName,
-        srcDocs: s.srcDocs,
+    const unsub = useEditor.subscribe(
+      (s) => ({
         pages: s.pages,
+        srcDocs: s.srcDocs,
         annotations: s.annotations,
-        savedAt: Date.now(),
-      })
-    })
+        docName: s.docName,
+      }),
+      (curr) => {
+        if (curr.pages.length) saveSessionDebounced({ ...curr, savedAt: Date.now() })
+      },
+      { equalityFn: shallow },
+    )
     return unsub
   }, [])
 
