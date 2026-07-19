@@ -17,6 +17,17 @@ If you don't hit File → Export, nothing leaves the tab. If you do, only your o
 
 The client-side unlock (`localStorage.evo_premium = '1'`) is an honor-system gate. It resists casual tampering but is not a licence check. If you need enforceable licensing, wire a backend webhook against the Stripe `checkout.session.completed` event and issue signed unlock tokens instead.
 
+### PII scanner — best-effort, not exhaustive
+
+The "Redact" tab runs regex patterns over each page's extracted text layer. Detection depends on how the PDF encodes that text:
+
+- **Scanned images** have no text layer. A scanned driver's licence returns zero hits. OCR is not yet built in — treat any zero-hit result on a scanned page as "unknown", not "clean".
+- **Custom glyph encodings** (some fonts subset with private-use codepoints, some engines emit unmapped CIDs) can extract as garbled characters and won't match the patterns.
+- **Vector-drawn text** (logos, some watermarks) has no text layer at all.
+- **Split runs**: pdf.js emits text as runs broken at font/kerning boundaries. The scanner concatenates runs before matching so a value like `555-` + `123-4567` still triggers, but a run split *inside* the character the regex needs to see (e.g. a run boundary where a required space would go, in a pattern that requires whitespace) can still hide a match.
+
+Treat the scan as a first pass, not a compliance certification. For hard cases, use the Redact tool to draw redaction boxes manually — the export burns those boxes into the rasterised page, so the underlying text is deleted, not merely hidden.
+
 ## Reporting a vulnerability
 
 Please open a private security advisory:

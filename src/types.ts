@@ -43,7 +43,9 @@ export type PiiHit = {
   pageId: string
   kind: string
   value: string
-  rect: { x: number; y: number; w: number; h: number }
+  // One rect per pdf.js text run the match overlaps — a value split across
+  // runs by kerning yields multiple rects and Cover redacts each one.
+  rects: { x: number; y: number; w: number; h: number }[]
 }
 
 export type FormField = { pageId: string; name: string; fieldType: string }

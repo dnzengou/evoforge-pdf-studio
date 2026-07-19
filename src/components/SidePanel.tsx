@@ -68,8 +68,8 @@ export function SidePanel() {
         if (meta.srcId === BLANK_SRC) continue
         for (const { kind, pattern } of PII_PATTERNS) {
           try {
-            const rects = await matchRects(meta.srcId, meta.srcIndex, meta.rotation, pattern)
-            for (const r of rects) hits.push({ pageId: meta.id, kind, value: r.value, rect: r.rect })
+            const matches = await matchRects(meta.srcId, meta.srcIndex, meta.rotation, pattern)
+            for (const r of matches) hits.push({ pageId: meta.id, kind, value: r.value, rects: r.rects })
           } catch {
             // page without text layer — skip
           }
@@ -104,14 +104,16 @@ export function SidePanel() {
 
   const coverHit = (hit: PiiHit) => {
     store().commit()
-    store().addAnnotation(hit.pageId, {
-      id: uid(),
-      kind: 'redact',
-      x: hit.rect.x - 2,
-      y: hit.rect.y - 2,
-      w: hit.rect.w + 4,
-      h: hit.rect.h + 4,
-    })
+    for (const rect of hit.rects) {
+      store().addAnnotation(hit.pageId, {
+        id: uid(),
+        kind: 'redact',
+        x: rect.x - 2,
+        y: rect.y - 2,
+        w: rect.w + 4,
+        h: rect.h + 4,
+      })
+    }
     setPii((prev) => prev?.filter((h) => h !== hit) ?? null)
   }
 
@@ -119,14 +121,16 @@ export function SidePanel() {
     if (!pii?.length) return
     store().commit()
     for (const hit of pii) {
-      store().addAnnotation(hit.pageId, {
-        id: uid(),
-        kind: 'redact',
-        x: hit.rect.x - 2,
-        y: hit.rect.y - 2,
-        w: hit.rect.w + 4,
-        h: hit.rect.h + 4,
-      })
+      for (const rect of hit.rects) {
+        store().addAnnotation(hit.pageId, {
+          id: uid(),
+          kind: 'redact',
+          x: rect.x - 2,
+          y: rect.y - 2,
+          w: rect.w + 4,
+          h: rect.h + 4,
+        })
+      }
     }
     setPii([])
   }
@@ -238,8 +242,9 @@ export function SidePanel() {
           )}
           {!pii && busy !== 'pii' && (
             <p className="mt-3 text-xs leading-relaxed text-zinc-500">
-              Finds emails, phone numbers, SSNs, cards, IBANs, IPs. One click covers each with a
-              redaction box burned into the export.
+              Finds emails, phone numbers, SSNs, cards, IBANs, IPs. Best-effort — scanned pages
+              and unusual text encodings can hide values from the regex. One click covers each hit
+              with a redaction box burned into the export.
             </p>
           )}
         </TabsContent>
