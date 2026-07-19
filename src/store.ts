@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { subscribeWithSelector } from 'zustand/middleware'
 import type { Annotation, PageMeta, Snapshot, Tool } from '@/types'
 import { uid } from '@/types'
 import { isPremium } from '@/lib/entitlement'
@@ -63,7 +64,7 @@ const takeSnapshot = (s: EditorState): Snapshot => ({
   annotations: Object.fromEntries(Object.entries(s.annotations).map(([k, v]) => [k, [...v]])),
 })
 
-export const useEditor = create<EditorState>((set) => ({
+export const useEditor = create<EditorState>()(subscribeWithSelector((set) => ({
   docName: '',
   srcDocs: {},
   pages: [],
@@ -239,4 +240,4 @@ export const useEditor = create<EditorState>((set) => ({
       })
       return { pages }
     }),
-}))
+})))
